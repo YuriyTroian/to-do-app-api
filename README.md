@@ -40,8 +40,8 @@ pip install -r requirements.txt
 
 database.py
 
-`DATABASE_URL = "postgresql://username:password@localhost/dbname"
-DATABASE_URL = "postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api"`
+`DATABASE_URL = "postgresql://username:password@localhost/dbname"`
+`DATABASE_URL = "postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api"`
 
 ---
 
