@@ -32,22 +32,23 @@ cd to-do-app-api
 python -m venv venv
 source venv/bin/activate  # або .\venv\Scripts\activate на Windows
 pip install -r requirements.txt
+```
 
 ---
 
-## Налаштування
+## Налаштування DB
 
-```database.py
+database.py
 
-DATABASE_URL = "postgresql://username:password@localhost/dbname"
-DATABASE_URL = "postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api"
+`DATABASE_URL = "postgresql://username:password@localhost/dbname"
+DATABASE_URL = "postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api"`
 
 ---
 
 ## Запуск app
 
-```
-### .\to-do-app-api
+
+_.\to-do-app-api_
 
 _uvicorn main:app --reload_
 
