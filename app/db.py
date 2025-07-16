@@ -3,7 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.models import Base
 
-DATABASE_URL = "postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Завантажує .env файл
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 
 engine = create_async_engine(DATABASE_URL)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)

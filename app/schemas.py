@@ -20,8 +20,12 @@ class TaskOut(BaseModel):
         orm_mode = True
 
 class TaskUpdate(BaseModel):
+    description: Optional[str] = None
     priority: Optional[int] = None
     is_done: Optional[bool] = None
+
+
+
 
 
 
