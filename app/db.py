@@ -6,7 +6,7 @@ from app.models import Base
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # Завантажує .env файл
+load_dotenv() 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
