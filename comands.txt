@@ -1,0 +1,8 @@
+docker image ls --> переглянути всі образи
+docker rmi <image_name_or_id> / docker rmi $(docker images -a -q) --> видалення конкретного образу/видалення усіх образів
+docker pull postgres --> завантажити образ PostgreSQL з Docker Hub
+docker run -itd -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=123321 \ --> вручну запустити контейнер
+-p 5432:5432 -v D:/Study/dmytro.buzoveria/Desktop/postgres_data:/var/lib/postgresql/data postgres
+docker exec -it postgresql bash --> зайти в оболочку контейнера
+psql -h localhost -U postgres --> зайти в оболочку postgres контейнера
+docker inspect <name_or_id>  --> показати всі налаштування і параметри контейнера або образу <name_or_id>

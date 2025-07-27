@@ -41,6 +41,7 @@ async def get_tasks(
     )
     tasks = result.scalars().all()
 
+
     return tasks
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
