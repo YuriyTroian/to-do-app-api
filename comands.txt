@@ -5,4 +5,4 @@ docker run -itd -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=123321 \ --> вр
 -p 5432:5432 -v D:/Study/dmytro.buzoveria/Desktop/postgres_data:/var/lib/postgresql/data postgres
 docker exec -it postgresql bash --> зайти в оболочку контейнера
 psql -h localhost -U postgres --> зайти в оболочку postgres контейнера
-docker inspect <name_or_id>  --> показати всі налаштування і параметри контейнера або образу <name_or_id>
+docker inspect <name_or_id>  --> показати всі налаштування *-і параметри контейнера або образу <name_or_id>
