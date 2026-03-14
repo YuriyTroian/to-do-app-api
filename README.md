@@ -11,6 +11,7 @@
 - Отримання завдання за ID
 - Оновлення завдання
 - Видалення завдання
+- Отримання статистики по виконаних завданнях
 
 ---
 
@@ -40,7 +41,7 @@ pip install -r requirements.txt
 
 database.py
 
-`DATABASE_URL = "postgresql://username:password@localhost/dbname"`
+`DATABASE_URL = "postgresql://username:password@localhost:5432/dbname"`
 
 `DATABASE_URL = "postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api"`
 
@@ -50,45 +51,54 @@ database.py
 
 
 _.\to-do-app-api_
-
-_uvicorn main:app --reload_
+```bash
+uvicorn main:app --reload_
+```
 
 _з якимось конкретним портом ---> uvicorn main:app --reload --port 8080_
 
 ---
-
-## Структура проєкту
-
-
-
-to-do-app-api/
-│
-├── app/
-│ ├── app.py 
-│ ├── crud.py # CRUD логіка
-│ ├── db.py # Підключення до бази даних
-│ ├── models.py # SQLAlchemy моделі 
-│ └── schemas.py # Pydantic-схеми
-│
-├── Dockerfile # Інструкції для створення Docker-образу
-├── docker-compose.yml # Опис сервісів (API + Postgres)
-├── requirements.txt # Залежності Python
-├── main.py # Запуск апки
-└── .env # Секрети та конфігурації
-
 ## ⚙️ Конфігурація `.env`
 
 Створи `.env` файл у корені проєкту:3
 
-_ POSTGRES_USER=postgres
+```
+POSTGRES_USER=postgres
 POSTGRES_PASSWORD=47911974
 POSTGRES_DB=to-do-app-api
 POSTGRES_PORT=5432
-POSTGRES_HOST=database
+POSTGRES_HOST=localhost
 
-DATABASE_URL=postgresql+asyncpg://postgres:47911974@database:5432/to-do-app-api_
+DATABASE_URL=postgresql+asyncpg://postgres:47911974@localhost:5432/to-do-app-api
+
+```
 
 
+
+---
+##  API Ендпоінти
+* **POST /tasks** — Створення завдань (приймає title, description та priority).
+* **GET /tasks/** — Список усіх завдань.
+* **GET /tasks/{task_id}** — Отримання конкретного завдання за id.
+* **DELETE /tasks/{task_id}** — Видалення завдання.
+* **PUT /tasks/{task_id}** — Редагування завдання.
+* **GET /stats** — Статистика виконаних завдань.
+
+---
+
+##  Запуск через Docker
+```powershell
+# З кореня проекту виконайте:
+docker-compose up --build
+```
+Після запуску сервіси будуть доступні за адресами:
+
+* **Backend API**: <http://localhost:8000>
+
+* **Swagger (Документація)**: <http://localhost:8000/docs>
+
+* **Database (PostgreSQL)**: localhost:5432
+---
 
 
 
