@@ -27,7 +27,7 @@ async def create_db_and_tables(retries: int = 5):
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-            break  # успіх
+            break
         except OperationalError:
             print(f"[DB] Attempt {attempt+1} failed, retrying in 2s...")
             await asyncio.sleep(2)

@@ -1,4 +1,29 @@
-
-venv/
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables (SECURITY!)
+.env
+.env.docker
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+.docker/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
