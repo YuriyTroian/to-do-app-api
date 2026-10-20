@@ -27,3 +27,10 @@ pip-delete-this-directory.txt
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json

@@ -1,5 +1,6 @@
 FROM python:3.11-slim
 
+RUN useradd -m -r appuser
 
 WORKDIR /fastapi
 
@@ -9,5 +10,8 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY . /fastapi
 
+RUN chown -R appuser:appuser /fastapi
 
-CMD ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+USER appuser
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
