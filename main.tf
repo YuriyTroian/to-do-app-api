@@ -25,7 +25,7 @@ resource "aws_security_group" "rds_sg" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Відкриваємо доступ, щоб ти міг підключитися з комп'ютера
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -44,7 +44,7 @@ resource "aws_db_instance" "postgres" {
   identifier             = "todo-db"
   db_name                = "todo_db"
   username               = "postgres"
-  password               = "SuperSecretPassword123" # Пароль для бази
+  password               = var.db_password
   skip_final_snapshot    = true
   publicly_accessible    = true
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
@@ -120,13 +120,13 @@ resource "aws_lb" "api_alb" {
 
 resource "aws_lb_target_group" "api_tg" {
   name        = "todo-api-tg"
-  port        = 8000 # Порт, на якому локально крутився твій FastAPI
+  port        = 8000
   protocol    = "HTTP"
   vpc_id      = data.aws_vpc.default.id
   target_type = "ip"
 
   health_check {
-    path = "/" # Або "/docs", якщо в тебе немає кореневого ендпоінту
+    path = "/"
   }
 }
 
