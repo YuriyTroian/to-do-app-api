@@ -185,7 +185,7 @@ resource "aws_ecs_task_definition" "api_task" {
     environment = [
       {
         name  = "DATABASE_URL"
-        value = "postgresql+asyncpg://postgres:SuperSecretPassword123@${aws_db_instance.postgres.endpoint}/todo_db"
+        value = "postgresql+asyncpg://postgres:${var.db_password}@${aws_db_instance.postgres.endpoint}/todo_db"
       }
     ]
   }])
