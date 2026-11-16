@@ -1,7 +1,9 @@
 from datetime import datetime
 
 from pydantic import BaseModel
+from uuid import UUID
 from typing import Optional
+
 
 
 class TaskCreate(BaseModel):
@@ -10,6 +12,7 @@ class TaskCreate(BaseModel):
     priority: int
 
 class TaskOut(BaseModel):
+    id: UUID
     title: str
     description: Optional[str] = None
     priority: int
