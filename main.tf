@@ -164,6 +164,11 @@ resource "aws_security_group" "ecs_sg" {
 
 resource "aws_ecs_cluster" "api_cluster" {
   name = "todo-api-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 resource "aws_ecs_task_definition" "api_task" {
@@ -186,7 +191,11 @@ resource "aws_ecs_task_definition" "api_task" {
       {
         name  = "DATABASE_URL"
         value = "postgresql+asyncpg://postgres:${var.db_password}@${aws_db_instance.postgres.endpoint}/todo_db"
-      }
+      },
+      { name = "CACHE_ENABLED",     value = tostring(var.cache_enabled) },
+      { name = "REDIS_HOST",        value = aws_elasticache_cluster.redis.cache_nodes[0].address },
+      { name = "REDIS_PORT",        value = "6379" },
+      { name = "CACHE_TTL_SECONDS", value = "30" }
     ]
   }])
 }
@@ -208,6 +217,10 @@ resource "aws_ecs_service" "api_service" {
     target_group_arn = aws_lb_target_group.api_tg.arn
     container_name   = "todo-api"
     container_port   = 8000
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
   }
 }
 

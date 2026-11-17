@@ -13,7 +13,9 @@ from sqlalchemy.future import select
 from sqlalchemy import text
 
 from datetime import datetime
-
+import json
+from fastapi import Response
+from app.cache import cache_get, cache_set, cache_invalidate, cache_stats
 
 router = APIRouter()
 
@@ -26,6 +28,7 @@ async def create_task(task: TaskCreate, session: AsyncSession = Depends(get_asyn
     session.add(db_task)
     await session.commit()
     await session.refresh(db_task)
+    await cache_invalidate()
     return db_task
 
 
@@ -35,14 +38,25 @@ async def get_tasks(
         offset: int = 0,
         limit: Annotated[int, Query(le=100)] = 100,
 ):
+    cached, key = await cache_get(offset, limit)
+    if cached is not None:
+        return Response(content=cached, media_type="application/json")
 
     result = await session.execute(
         select(Tasks).order_by(Tasks.priority.asc()).offset(offset).limit(limit)
     )
     tasks = result.scalars().all()
 
+    payload = json.dumps([
+        TaskOut.model_validate(t, from_attributes=True).model_dump(mode="json")
+        for t in tasks
+    ])
+    await cache_set(key, payload)
+    return Response(content=payload, media_type="application/json")
 
-    return tasks
+@router.get("/cache/stats")
+async def get_cache_stats():
+    return await cache_stats()
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
 async def get_task(task_id, session: AsyncSession = Depends(get_async_session)):
@@ -65,6 +79,7 @@ async def delete_task(task_id, session: AsyncSession = Depends(get_async_session
         raise HTTPException(status_code=404, detail="Task not found")
     await session.delete(task)
     await session.commit()
+    await cache_invalidate()
     return {"ok": True}
 
 @router.put("/tasks/{task_id}", response_model=TaskOut)
@@ -98,6 +113,7 @@ async def update_task(task_id, task_new: TaskUpdate, session: AsyncSession = Dep
 
     await session.commit()
     await session.refresh(task)
+    await cache_invalidate()
     return task
 
 @router.get("/stats")

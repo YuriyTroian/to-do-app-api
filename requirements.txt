@@ -5,3 +5,4 @@ asyncpg==0.30.0
 uvicorn[standard]
 aiosqlite
 datetime
+redis==5.0.8
