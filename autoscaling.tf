@@ -8,6 +8,46 @@ resource "aws_appautoscaling_target" "ecs" {
 
   min_capacity = 1
   max_capacity = 3 # за умовою не більше 4
+
+  # Мінімум змінюють заплановані дії нижче (день/ніч), тож Terraform не повинен
+  # повертати min_capacity до значення з коду при наступному apply.
+  lifecycle {
+    ignore_changes = [min_capacity, max_capacity]
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Завдання 8: масштабування за розкладом (різний мінімум удень і вночі)
+# Удень (08:00–22:00 за київським часом) мінімум 2 екземпляри, вночі — 1.
+# До нуля не масштабуємо: сервіс стоїть за ALB, а ECS не прокидає задачі з нуля
+# за вхідним запитом, тож перший запит після простою отримав би 503.
+# ---------------------------------------------------------------------------
+resource "aws_appautoscaling_scheduled_action" "day" {
+  name               = "day-min-2"
+  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+  resource_id        = aws_appautoscaling_target.ecs.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
+  schedule           = "cron(0 8 * * ? *)"
+  timezone           = "Europe/Kyiv"
+
+  scalable_target_action {
+    min_capacity = 2
+    max_capacity = 3
+  }
+}
+
+resource "aws_appautoscaling_scheduled_action" "night" {
+  name               = "night-min-1"
+  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+  resource_id        = aws_appautoscaling_target.ecs.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
+  schedule           = "cron(0 22 * * ? *)"
+  timezone           = "Europe/Kyiv"
+
+  scalable_target_action {
+    min_capacity = 1
+    max_capacity = 3
+  }
 }
 
 resource "aws_appautoscaling_policy" "cpu" {

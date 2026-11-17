@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 # from app.app import app
 from app.schemas import TaskCreate, TaskUpdate, TaskOut
@@ -7,7 +7,9 @@ from app.db import get_async_session
 
 # from sqlmodel import Session, Depends, select
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, Query, Depends, APIRouter
+from fastapi import HTTPException, Query, Depends, APIRouter, Header
+from fastapi.responses import JSONResponse
+from app import idempotency
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text
@@ -23,12 +25,33 @@ router = APIRouter()
 # SessionDep = Annotated[Session, Depends(get_async_session)]
 
 @router.post("/tasks/", response_model=TaskOut)
-async def create_task(task: TaskCreate, session: AsyncSession = Depends(get_async_session)):
-    db_task = Tasks(**task.dict())
-    session.add(db_task)
-    await session.commit()
-    await session.refresh(db_task)
-    await cache_invalidate()
+async def create_task(
+        task: TaskCreate,
+        session: AsyncSession = Depends(get_async_session),
+        idempotency_key: Optional[str] = Header(default=None),
+):
+    fp = None
+    if idempotency_key:
+        fp = idempotency.fingerprint(task.model_dump())
+        replay = await idempotency.begin(idempotency_key, fp)
+        if replay is not None:
+            return replay  # повторний запит: збережена відповідь, у базу не пишемо
+
+    try:
+        db_task = Tasks(**task.dict())
+        session.add(db_task)
+        await session.commit()
+        await session.refresh(db_task)
+        await cache_invalidate()
+    except Exception:
+        if idempotency_key:
+            await idempotency.abort(idempotency_key)  # дозволяємо клієнту повторити
+        raise
+
+    if idempotency_key:
+        body = TaskOut.model_validate(db_task, from_attributes=True).model_dump(mode="json")
+        await idempotency.complete(idempotency_key, fp, body, 200)
+        return JSONResponse(content=body)
     return db_task
 
 
