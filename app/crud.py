@@ -1,4 +1,5 @@
 from typing import Annotated, Optional
+from uuid import UUID
 
 # from app.app import app
 from app.schemas import TaskCreate, TaskUpdate, TaskOut
@@ -12,7 +13,7 @@ from fastapi.responses import JSONResponse
 from app import idempotency
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import text
+from sqlalchemy import func
 
 from datetime import datetime
 import json
@@ -82,7 +83,7 @@ async def get_cache_stats():
     return await cache_stats()
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
-async def get_task(task_id, session: AsyncSession = Depends(get_async_session)):
+async def get_task(task_id: UUID, session: AsyncSession = Depends(get_async_session)):
     result = await session.execute(
         select(Tasks).filter(Tasks.id == task_id)
     )
@@ -93,7 +94,7 @@ async def get_task(task_id, session: AsyncSession = Depends(get_async_session)):
     return task
 #
 @router.delete("/tasks/{task_id}")
-async def delete_task(task_id, session: AsyncSession = Depends(get_async_session)):
+async def delete_task(task_id: UUID, session: AsyncSession = Depends(get_async_session)):
     result = await session.execute(
         select(Tasks).filter(Tasks.id == task_id)
     )
@@ -106,7 +107,7 @@ async def delete_task(task_id, session: AsyncSession = Depends(get_async_session
     return {"ok": True}
 
 @router.put("/tasks/{task_id}", response_model=TaskOut)
-async def update_task(task_id, task_new: TaskUpdate, session: AsyncSession = Depends(get_async_session)):
+async def update_task(task_id: UUID, task_new: TaskUpdate, session: AsyncSession = Depends(get_async_session)):
     result = await session.execute(
         select(Tasks).filter(Tasks.id == task_id)
     )
@@ -141,29 +142,21 @@ async def update_task(task_id, task_new: TaskUpdate, session: AsyncSession = Dep
 
 @router.get("/stats")
 async def get_stats(session: AsyncSession = Depends(get_async_session)):
-
-    #Total
-    result_total = await session.execute(
-        select(Tasks)
+    # Один агрегатний запит: рахує сама база, у Python повертається один рядок,
+    # тож вартість не залежить від кількості записів.
+    result = await session.execute(
+        select(
+            func.count(Tasks.id),
+            func.count(Tasks.id).filter(Tasks.is_done.is_(True)),
+            func.count(Tasks.id).filter(Tasks.is_done.is_(False)),
+        )
     )
-    tasks_total = result_total.scalars().all()
-
-    #Completed
-    result_completed = await session.execute(
-        select(Tasks).filter(Tasks.is_done == True)
-    )
-    tasks_completed = result_completed.scalars().all()
-
-    #Pending
-    result_pending = await session.execute(
-        select(Tasks).filter(Tasks.is_done == False)
-    )
-    tasks_pending = result_pending.scalars().all()
+    total, complete, pending = result.one()
 
     return {
-        "total": len(tasks_total),
-        "complete": len(tasks_completed),
-        "pending": len(tasks_pending)
+        "total": total,
+        "complete": complete,
+        "pending": pending
     }
 
 

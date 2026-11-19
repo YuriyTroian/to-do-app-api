@@ -1,5 +1,4 @@
-# Лаба 2, завдання 3 (панель моніторингу) і 4 (сповіщення).
-# Імена ресурсів відповідають main.tf: api_cluster, api_service, api_alb.
+# Панель моніторингу (п'ять графіків) і сповіщення на пошту (латентність p95 > 500 мс протягом 2 хвилин).
 
 locals {
   cluster_name = aws_ecs_cluster.api_cluster.name
@@ -8,7 +7,7 @@ locals {
 }
 
 # ---------------------------------------------------------------------------
-# Завдання 3: панель з п'ятьма графіками
+# Панель з п'ятьма графіками
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_dashboard" "api" {
   dashboard_name = "todo-api-dashboard"
@@ -40,12 +39,6 @@ resource "aws_cloudwatch_dashboard" "api" {
           metrics = [
             ["AWS/ECS", "CPUUtilization", "ClusterName", local.cluster_name, "ServiceName", local.service_name]
           ]
-          annotations = {
-            horizontal = [
-              { label = "Ціль масштабування 60%", value = 60 },
-              { label = "Поріг сповіщення 70%", value = 70 }
-            ]
-          }
           yAxis = { left = { min = 0, max = 100 } }
         }
       },
@@ -60,6 +53,11 @@ resource "aws_cloudwatch_dashboard" "api" {
           metrics = [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", local.alb_suffix]
           ]
+          annotations = {
+            horizontal = [
+              { label = "Поріг масштабування: 1500 запитів/хв на екземпляр", value = 1500 }
+            ]
+          }
         }
       },
       {
@@ -73,6 +71,11 @@ resource "aws_cloudwatch_dashboard" "api" {
           metrics = [
             ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", local.alb_suffix]
           ]
+          annotations = {
+            horizontal = [
+              { label = "Поріг сповіщення 500 мс", value = 0.5 }
+            ]
+          }
         }
       },
       {
@@ -93,7 +96,7 @@ resource "aws_cloudwatch_dashboard" "api" {
 }
 
 # ---------------------------------------------------------------------------
-# Завдання 4: сповіщення на пошту (CPU > 70% протягом 2 хвилин + лист про норму)
+# Сповіщення на пошту: p95 латентності > 500 мс протягом 2 хвилин + лист про норму
 # ---------------------------------------------------------------------------
 variable "alert_email" {
   description = "Email для сповіщень"
@@ -110,21 +113,20 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.alert_email
 }
 
-resource "aws_cloudwatch_metric_alarm" "cpu_high" {
-  alarm_name          = "todo-api-cpu-high"
-  alarm_description   = "Середнє завантаження CPU сервісу > 70% протягом 2 хвилин"
-  namespace           = "AWS/ECS"
-  metric_name         = "CPUUtilization"
-  statistic           = "Average"
+resource "aws_cloudwatch_metric_alarm" "latency_high" {
+  alarm_name          = "todo-api-latency-high"
+  alarm_description   = "p95 латентності відповіді сервісу > 500 мс протягом 2 хвилин"
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "TargetResponseTime"
+  extended_statistic  = "p95"
   period              = 60
   evaluation_periods  = 2
-  threshold           = 70
+  threshold           = 0.5 # секунди
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    ClusterName = local.cluster_name
-    ServiceName = local.service_name
+    LoadBalancer = local.alb_suffix
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn] # лист при тривозі

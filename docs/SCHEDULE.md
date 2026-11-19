@@ -15,13 +15,22 @@
 
 ## Перевірка
 
-Дії створено через `terraform apply` і підтверджено в AWS (`describe-scheduled-actions`): `day-min-2` — `cron(0 8 * * ? *)`, `night-min-1` — `cron(0 22 * * ? *)`, обидві з часовим поясом `Europe/Kyiv`. У момент перевірки (18.11.2026, 01:55 за київським часом, тобто «ніч») мінімум цільового ресурсу був 1, а сервіс мав 1 екземпляр. Перемикання на мінімум 2 о 08:00 під час написання ще не відбулося, тому спрацювання розкладу не спостерігалось. Перевірити після 08:00:
+Дії створено через `terraform apply` і підтверджено в AWS (`describe-scheduled-actions`): `day-min-2` — `cron(0 8 * * ? *)`, `night-min-1` — `cron(0 22 * * ? *)`, обидві з часовим поясом `Europe/Kyiv`.
+
+**Спрацювання спостерігалось.** Журнал дій Application Auto Scaling (`describe-scaling-activities`) за 18.11.2026:
+
+| Час (Europe/Kyiv) | Подія |
+|---|---|
+| 08:00:23 | `scheduled action name day-min-2 was triggered` — «Setting min capacity to 2 and max capacity to 3» |
+| 08:00:23 | `minimum capacity was set to 2` — «Setting desired count to 2» |
+
+Тобто о 08:00 мінімум піднявся до 2, і сервіс із 1 екземпляра виріс до 2 без жодного навантаження. Увечері (о 22:00) `night-min-1` повертає мінімум 1. Перевірити стан вручну:
 
 ```bash
 aws application-autoscaling describe-scalable-targets --service-namespace ecs --region eu-north-1 --query "ScalableTargets[].MinCapacity"
 ```
 
-Очікується `2`.
+Удень очікується `2`, уночі `1`. Під час навантажувальних тестів вдень мінімум тимчасово знижувався вручну до 1, щоб показати масштабування з одного екземпляра (див. [AUTOSCALING.md](AUTOSCALING.md)).
 
 ## Чому не до нуля
 

@@ -187,11 +187,10 @@ resource "aws_ecs_task_definition" "api_task" {
       containerPort = 8000
       hostPort      = 8000
     }]
+    secrets = [
+      { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.arn }
+    ]
     environment = [
-      {
-        name  = "DATABASE_URL"
-        value = "postgresql+asyncpg://postgres:${var.db_password}@${aws_db_instance.postgres.endpoint}/todo_db"
-      },
       { name = "CACHE_ENABLED",     value = tostring(var.cache_enabled) },
       { name = "REDIS_HOST",        value = aws_elasticache_cluster.redis.cache_nodes[0].address },
       { name = "REDIS_PORT",        value = "6379" },

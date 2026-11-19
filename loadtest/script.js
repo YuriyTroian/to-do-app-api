@@ -1,10 +1,10 @@
-// Лаба 2, завдання 2: профіль "мало записів, багато читань".
+// Навантажувальний сценарій: профіль "мало записів, багато читань".
 // Один віртуальний користувач за ітерацію: 1 запис + 9 читань.
 //
 // Запуск однією командою (з кореня репозиторію):
 //   k6 run loadtest/script.js
 // Свої параметри:
-//   k6 run -e BASE_URL=http://<alb-dns> -e VUS=40 loadtest/script.js
+//   k6 run -e BASE_URL=http://<alb-dns> -e VUS=80 loadtest/script.js
 //
 // Фази: наростання 0 -> N за 3 хв, стале навантаження 5 хв, спад до 0 за 2 хв.
 
@@ -12,7 +12,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://todo-api-alb-725788838.eu-north-1.elb.amazonaws.com';
-const N = parseInt(__ENV.VUS || '40'); // підбери так, щоб на плато CPU перетинав 60 %
+const N = parseInt(__ENV.VUS || '80'); // користувачі на плато (не більше 99: див. формулу priority нижче)
 
 // priority в таблиці tasks UNIQUE (Integer, максимум 2 147 483 647), тому для кожного
 // запису потрібне унікальне число. RUN змінюється щохвилини, тож повторні прогони
@@ -45,7 +45,7 @@ export default function () {
     tags: { name: 'POST /tasks/' },
   });
   const ok = check(created, { 'create: 200': (r) => r.status === 200 });
-  const id = ok ? created.json('id') : null; // потребує id у TaskOut (див. нотатки)
+  const id = ok ? created.json('id') : null; // id створеного запису (його повертає TaskOut)
 
   // --- 9 читань ---
   const list = () =>

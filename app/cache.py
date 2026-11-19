@@ -8,8 +8,12 @@ CACHE_ENABLED = os.getenv("CACHE_ENABLED", "false").lower() == "true"
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 TTL = int(os.getenv("CACHE_TTL_SECONDS", "30"))
+# За замовчуванням кеш списку живе лише TTL (30 с): клієнт може бачити застарілий список
+# до 30 с після запису, зате частка влучань висока. З CACHE_INVALIDATE_ON_WRITE=true кожен
+# запис скидає всі кешовані списки (дані свіжі, але при частих записах кеш майже не працює).
+INVALIDATE_ON_WRITE = os.getenv("CACHE_INVALIDATE_ON_WRITE", "false").lower() == "true"
 
-VERSION_KEY = "tasks:version"   # збільшується при кожному записі -> інвалідація
+VERSION_KEY = "tasks:version"   # збільшується при кожному записі, якщо INVALIDATE_ON_WRITE
 HITS_KEY = "cache:hits"
 MISSES_KEY = "cache:misses"
 
@@ -22,8 +26,8 @@ def _get_client():
     if _client is None:
         _client = redis.Redis(
             host=REDIS_HOST, port=REDIS_PORT, decode_responses=True,
-            # 2 с, а не 0.5: під повним навантаженням CPU event loop затримується,
-            # і короткі таймаути перетворювали кожне читання на промах + втрату 0.5 с.
+            # Таймаут 2 с: під повним навантаженням CPU event loop затримується,
+            # і коротший таймаут перетворював би читання на промахи.
             socket_connect_timeout=2, socket_timeout=2,
         )
     return _client
@@ -41,7 +45,8 @@ async def cache_get(offset: int, limit: int):
         return None, None
     try:
         r = _get_client()
-        version = await r.get(VERSION_KEY) or "0"
+        # Версію читаємо лише якщо увімкнена інвалідація: це зайве звернення до Redis.
+        version = (await r.get(VERSION_KEY) or "0") if INVALIDATE_ON_WRITE else "0"
         key = f"tasks:list:v{version}:{offset}:{limit}"
         data = await r.get(key)
         await r.incr(HITS_KEY if data else MISSES_KEY)
@@ -61,8 +66,8 @@ async def cache_set(key: str | None, payload: str):
 
 
 async def cache_invalidate():
-    """Після POST/PUT/DELETE: нова версія -> усі старі ключі списку стають недосяжними."""
-    if not CACHE_ENABLED:
+    """Після POST/PUT/DELETE (якщо INVALIDATE_ON_WRITE): нова версія -> старі ключі списку недосяжні."""
+    if not CACHE_ENABLED or not INVALIDATE_ON_WRITE:
         return
     try:
         await _get_client().incr(VERSION_KEY)
@@ -77,6 +82,7 @@ async def cache_stats():
     hits = int(await r.get(HITS_KEY) or 0)
     misses = int(await r.get(MISSES_KEY) or 0)
     total = hits + misses
-    return {"enabled": True, "hits": hits, "misses": misses,
+    return {"enabled": True, "invalidate_on_write": INVALIDATE_ON_WRITE, "ttl": TTL,
+            "hits": hits, "misses": misses,
             "hit_ratio": round(hits / total, 4) if total else None,
             "errors_this_instance": _errors}
